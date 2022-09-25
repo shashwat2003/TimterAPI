@@ -42,6 +42,7 @@ class UserLoginView(APIView):
 
         else:
             username = request.data.get("username")
+            print(username)
         user = authenticate(username=username,
                             password=request.data.get("password"))
         if user is not None:
@@ -58,6 +59,8 @@ class UserRegistrationView(APIView):
         if otp != -1 and email != "" and OTP.objects.filter(otp=otp, expiry__gt=datetime.now(), email=email).exists():
             serializer = UserSerializer(data=request.data)
             if serializer.is_valid():
+                serializer.save()
+                OTP.objects.get(otp=otp, email=email).delete()
                 return Response({"success": "Account Creation Successful!"})
             else:
                 return Response({"error": serializer.errors}, HTTP_400_BAD_REQUEST)
@@ -69,6 +72,8 @@ class OTPView(APIView):
     def post(self, request: Request):
         email = request.data.get("email", "").strip()
         username = request.data.get("username", "").strip()
+        if email == "" or username == "":
+            return Response({"error": "Email or UserName cannot be null!"}, status=HTTP_400_BAD_REQUEST)
         if not User.objects.filter(Q(username=username) | Q(email=email)).exists() and not OTP.objects.filter(Q(email=email) | Q(username=username)).filter(expiry__gt=datetime.now()).exists():
             if OTP.objects.filter(Q(email=email) | Q(username=username)).first() is not None:
                 try:

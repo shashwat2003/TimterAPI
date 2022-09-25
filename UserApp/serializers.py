@@ -5,10 +5,17 @@ from .models import *
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["username", "password", "email", "first_name", "last_name"]
+        fields = ["username", "password", "email", "first_name", "last_name",
+                  "verification_status", "profile_photo", "special_status", "bio", "website"]
         extra_kwargs = {
             'password': {'write_only': True}
         }
+
+    def create(self, validated_data):
+        user = super().create(validated_data)
+        user.set_password(validated_data["password"])
+        user.save()
+        return user
 
     def update(self, instance, validated_data):
         user = super().update(instance, validated_data)
@@ -16,3 +23,13 @@ class UserSerializer(serializers.ModelSerializer):
             user.set_password(validated_data["password"])
             user.save()
         return user
+
+
+class TweetedUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["username", "first_name", "last_name",
+                  "verification_status", "profile_photo", "special_status"]
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }

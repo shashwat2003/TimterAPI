@@ -18,4 +18,5 @@ from django.urls import path, include
 
 urlpatterns = [
     path('user/', include('UserApp.urls')),
+    path('tweet/', include('TweetApp.urls')),
 ]
