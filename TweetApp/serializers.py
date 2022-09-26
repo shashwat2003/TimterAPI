@@ -15,25 +15,32 @@ class TweetViewSerializer(ModelSerializer):
 
     def __init__(self, instance=None, data=..., **kwargs):
         self.requested_id = kwargs.pop("user")
+        self.following = kwargs.pop("following", [])
         super().__init__(instance, data, **kwargs)
 
     class Meta:
         model = Tweet
-        fields = ["user", "text", "timestamp", "id"]
+        fields = ["user", "text", "timestamp", "id", "parent_tweet"]
         depth = 1
 
     def get_media(self, instance):
         return [tweet.media.url for tweet in TweetMedia.objects.filter(tweet=instance.id)]
 
     def to_representation(self, instance):
+        if instance.parent_tweet is not None:
+            self.fields['parent_tweet'] = TweetViewSerializer(
+                read_only=True, user=instance.parent_tweet.user.id)
         data = super().to_representation(instance)
         data["media"] = self.get_media(instance)
         data["liked"] = True if instance.likes.filter(
             id=self.requested_id).exists() else False
         data["retweeted"] = True if instance.retweets.filter(
             id=self.requested_id).exists() else False
+        data["retweets"] = instance.retweets.count()
+        data["likes"] = instance.likes.count()
         # retweeted_by
-        # data["is_retweeted"] = instance
+        data["retweeted_by"] = instance.retweets.filter(
+            id__in=self.following).values_list("username", flat=True)
         return data
 
 

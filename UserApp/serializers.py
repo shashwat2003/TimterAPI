@@ -30,6 +30,3 @@ class TweetedUserSerializer(serializers.ModelSerializer):
         model = User
         fields = ["username", "first_name", "last_name",
                   "verification_status", "profile_photo", "special_status"]
-        extra_kwargs = {
-            'password': {'write_only': True}
-        }

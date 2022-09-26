@@ -2,30 +2,28 @@ from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework.views import APIView
 from rest_framework import status
+from rest_framework.pagination import PageNumberPagination
 
 from UserApp.models import User
 from .serializers import *
-from .pagination import *
 from django.core.files.storage import default_storage
 
 # Create your views here.
 
 
-class TweetView(APIView, TweetPagination):
+class TweetView(APIView, PageNumberPagination):
+    page_size = 2
 
     def get(self, request: Request):
         following = list(request.user.followings.all(
         ).values_list("user_id", flat=True))
         tweets = Tweet.objects.filter(
             user__in=following).order_by("-timestamp")
-        # retweets = [User.objects.get(id=user).retweeted_tweets.order_by("-timestamp")
-        #             for user in following]
-        retweets = Tweet.objects.filter(retweets__in=following)
-        print(retweets)
+        retweets = Tweet.objects.filter(
+            retweets__in=following, parent_tweet=None)
         tweets = tweets.union(retweets).order_by("-timestamp")
-        # print(tweets)
         serializer = TweetViewSerializer(
-            self.paginate_queryset(tweets, request, view=self), many=True, context={'request': request}, user=request.user.id)
+            self.paginate_queryset(tweets, request, view=self), many=True, user=request.user.id, following=following)
         return self.get_paginated_response(serializer.data)
 
     def post(self, request: Request):
