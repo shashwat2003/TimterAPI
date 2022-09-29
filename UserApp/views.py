@@ -8,6 +8,8 @@ from rest_framework.response import Response
 from rest_framework.status import *
 from rest_framework.views import APIView
 from TimterAPI.constants import yag
+from django.core.files.storage import default_storage
+
 
 from .models import *
 from .serializers import *
@@ -34,6 +36,7 @@ class UserLoginView(APIView):
             return Response({"verified": False})
 
     def post(self, request: Request):
+        print(request.data.keys())
         if "email" in request.data.keys():
             user = User.objects.filter(
                 email=request.data.get("email").strip()).first()
@@ -46,8 +49,9 @@ class UserLoginView(APIView):
         user = authenticate(username=username,
                             password=request.data.get("password"))
         if user is not None:
+            isFirstLogin = True if user.last_login == None else False
             login(request, user)
-            return Response({"success": "Login Success!"})
+            return Response({"success": "Login Success!", "isFirstLogin": isFirstLogin})
         else:
             return Response({"error": "User Not Found!"}, status=HTTP_400_BAD_REQUEST)
 
@@ -66,6 +70,31 @@ class UserRegistrationView(APIView):
                 return Response({"error": serializer.errors}, HTTP_400_BAD_REQUEST)
         else:
             return Response({"error": "OTP is Incorrect!"}, HTTP_400_BAD_REQUEST)
+
+    def put(self, request: Request):
+        if request.user.is_authenticated and request.user.is_active:
+            data = request.data if type(
+                request.data) == dict else request.data.dict()
+            data.pop("username", "")
+            data.pop("email", "")
+            data.pop("verification_status", "")
+            data.pop("special_status", "")
+
+            serializer = UserSerializer(
+                instance=request.user, data=data, partial=True)
+            if serializer.is_valid():
+                if request.user.profile_photo is not None:
+                    try:
+                        print(request.user.profile_photo.path)
+                        default_storage.delete(request.user.profile_photo.path)
+                    except:
+                        pass
+                serializer.save()
+                return Response({"success": "Updated Successfully!"})
+            else:
+                return Response({"error": serializer.errors}, status=HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"error": "User Not Authenticated!"}, status=HTTP_401_UNAUTHORIZED)
 
 
 class OTPView(APIView):

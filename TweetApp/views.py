@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
 
-from UserApp.models import User
+# from UserApp.models import User
 from .serializers import *
 from django.core.files.storage import default_storage
 
@@ -15,16 +15,19 @@ class TweetView(APIView, PageNumberPagination):
     page_size = 2
 
     def get(self, request: Request):
-        following = list(request.user.followings.all(
-        ).values_list("user_id", flat=True))
-        tweets = Tweet.objects.filter(
-            user__in=following).order_by("-timestamp")
-        retweets = Tweet.objects.filter(
-            retweets__in=following, parent_tweet=None)
-        tweets = tweets.union(retweets).order_by("-timestamp")
-        serializer = TweetViewSerializer(
-            self.paginate_queryset(tweets, request, view=self), many=True, user=request.user.id, following=following)
-        return self.get_paginated_response(serializer.data)
+        if request.user.is_authenticated and request.user.is_active:
+            following = list(request.user.followings.all(
+            ).values_list("user_id", flat=True))
+            tweets = Tweet.objects.filter(
+                user__in=following, parent_tweet__parent_tweet=None).order_by("-timestamp")
+            retweets = Tweet.objects.filter(
+                retweets__in=following, parent_tweet=None)
+            tweets = tweets.union(retweets).order_by("-timestamp")
+            serializer = TweetViewSerializer(
+                self.paginate_queryset(tweets, request, view=self), many=True, user=request.user.id, following=following)
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response({"error": "User is unauthenticated!"}, status.HTTP_401_UNAUTHORIZED)
 
     def post(self, request: Request):
         if request.user.is_authenticated and request.user.is_active:

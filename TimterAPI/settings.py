@@ -141,3 +141,16 @@ if DEBUG:
     MEDIA_ROOT = "/home/shashwat2003/data_api/timter"
 else:
     MEDIA_ROOT = "/var/www/data/"
+
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+    "set-cookie"
+]
